@@ -3,9 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const overlay = document.getElementById('overlay');
     const closeOverlay = document.getElementById('close-overlay');
     const centralButton = document.querySelector('.central-button');
-    const interactiveObjectsContainer = document.createElement('div');
-    overlay.appendChild(interactiveObjectsContainer);
-    interactiveObjectsContainer.id = 'interactive-objects';
+    const interactiveObjectsContainer = document.getElementById('interactive-objects');
     let interactiveObjects = [];
 
     const lightParticlesConfig = {
@@ -68,7 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const createInteractiveObject = (id, src, x, y, isCentral = false) => {
         const obj = document.createElement('div');
-        obj.classList.add('interactive-object');
+        obj.classList.add('interactive-object', 'hidden');
         if (isCentral) {
             obj.classList.add('central-object');
         }
@@ -78,7 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const img = document.createElement('img');
         img.src = src;
         img.alt = `object-${id}`;
-
 
         obj.appendChild(img);
         interactiveObjectsContainer.appendChild(obj);
@@ -129,6 +126,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         const centralObject = createInteractiveObject(0, srcs[0], centralPosition.x, centralPosition.y, true);
+        centralObject.id = 'central-object';
+        centralObject.classList.remove('hidden');
+        centralObject.classList.add('visible');
         interactiveObjects.push(centralObject);
 
         surroundingPositions.forEach((pos, index) => {
@@ -140,61 +140,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
+    const animateObjects = () => {
+        const centralObject = document.getElementById('central-object');
+        centralObject.addEventListener('click', () => {
+            let delay = 0;
+            interactiveObjects.forEach((obj, index) => {
+                if (index !== 0) {
+                    setTimeout(() => {
+                        obj.classList.remove('hidden');
+                        obj.classList.add('visible');
+                        setTimeout(() => {
+                            obj.classList.add('animated');
+                        }, 10); // Atraso para permitir a transição de opacidade
+                    }, delay);
+                    delay += 500; // Atraso de 500ms entre as animações dos objetos
+                }
+            });
+        });
+    };
+
     overlay.style.display = 'none';
 
     modoNoturnoIcon.addEventListener('click', function() {
         document.body.classList.toggle('modo-noturno');
         const isNightMode = document.body.classList.contains('modo-noturno');
-        modoNoturnoIcon.src = isNightMode ? 'icone_sol.png' : 'icone_lua.png';
         loadParticlesConfig(isNightMode);
         loadMainParticlesConfig(isNightMode);
     });
 
     centralButton.addEventListener('click', function() {
-        overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        loadParticlesConfig(document.body.classList.contains('modo-noturno'));
+        overlay.style.display = 'block';
+        const isNightMode = document.body.classList.contains('modo-noturno');
+        loadParticlesConfig(isNightMode);
+        initializeInteractiveObjects();
+        animateObjects();
     });
 
     closeOverlay.addEventListener('click', function() {
         overlay.style.display = 'none';
-        document.body.style.overflow = '';
+        interactiveObjectsContainer.innerHTML = '';
+        interactiveObjects = [];
     });
 
-    overlay.addEventListener('click', function(event) {
-        if (event.target === overlay) {
-            overlay.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-    });
-
-    window.addEventListener('scroll', function() {
-        const footer = document.querySelector('footer');
-        footer.style.bottom = (window.scrollY + window.innerHeight >= document.body.offsetHeight) ? '0' : '-150px';
-    });
-
-    document.addEventListener('contextmenu', function(e) {
-        if (e.target.tagName === 'IMG') {
-            e.preventDefault();
-        }
-    });
-
-    document.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-    });
-
-    initializeInteractiveObjects();
-    loadMainParticlesConfig(document.body.classList.contains('modo-noturno'));
-});
-
-window.addEventListener('resize', () => {
-    const centralPosition = getCentralPosition();
-    console.log(`Posição central atualizada: x = ${centralPosition.x}, y = ${centralPosition.y}`);
+    loadMainParticlesConfig(false);
 });
 
 function getCentralPosition() {
-    const overlay = document.getElementById('overlay');
-    const centerX = overlay.offsetWidth / 2 - 35; // Subtract half of the object's width (70px / 2)
-    const centerY = overlay.offsetHeight / 2 - 35; // Subtract half of the object's height (70px / 2)
-    return { x: centerX, y: centerY };
+    const container = document.getElementById('interactive-objects');
+    const containerRect = container.getBoundingClientRect();
+    return {
+        x: containerRect.width / 2,
+        y: containerRect.height / 2
+    };
 }
